@@ -8,6 +8,7 @@ import (
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
 	txnBuilder "github.com/coming-chat/go-aptos/transaction_builder"
+	"github.com/jinzhu/gorm"
 )
 
 type CollectionData struct {
@@ -122,7 +123,7 @@ func (c *TokenClient) GetCollectionData(creator txnBuilder.AccountAddress, colle
 	out.Count, _ = strconv.ParseUint(out.CountString, 10, 64)
 	out.Maximum, _ = strconv.ParseUint(out.MaxString, 10, 64)
 	out.Supply, _ = strconv.ParseUint(out.SupplyString, 10, 64)
-	fmt.Println(out.CollectionData)
+	//fmt.Println(out.CollectionData)
 	return &out.CollectionData, nil
 }
 
@@ -166,7 +167,7 @@ func (c *TokenClient) GetTokenData(creator txnBuilder.AccountAddress, collection
 	out.Maximum, _ = strconv.ParseUint(out.MaxString, 10, 64)
 	out.Supply, _ = strconv.ParseUint(out.SupplyString, 10, 64)
 	out.Collection = collectionName
-	fmt.Println(out.TokenData)
+	//fmt.Println(out.TokenData)
 	return &out.TokenData, nil
 }
 
@@ -175,55 +176,8 @@ func (c *TokenClient) GetTokenData(creator txnBuilder.AccountAddress, collection
  * @param account Hex-encoded 32 byte Aptos account address which created a token
  * @param tokenId token id
  */
-func (c *TokenClient) GetTokenForAccount(account txnBuilder.AccountAddress, tokenId TokenId) (*Token, error) {
-	if tokenId.PropertyVersion == "" {
-		tokenId.PropertyVersion = "0"
-	}
-	tokenStore, err := c.GetAccountResourceByResType(account.ToShortString(), "0x3::token::TokenStore", 0)
-	if err != nil {
-		return nil, err
-	}
 
-	handle := ""
-	if data, ok := tokenStore.Data["tokens"].(map[string]interface{}); ok {
-		handle, _ = data["handle"].(string)
-	}
-	body := aptosclient.TableItemRequest{
-		KeyType:   "0x3::token::TokenId",
-		ValueType: "0x3::token::Token",
-		Key:       tokenId,
-	}
-
-	var out Token
-	err = c.GetTableItem(&out, handle, body, "")
-	if err != nil {
-		if restErr, ok := err.(*aptostypes.RestError); ok && restErr.Code == 404 {
-			return &Token{
-				Id:     tokenId,
-				Amount: "0",
-			}, nil
-		}
-		return nil, err
-	}
-
-	return &out, nil
-}
-
-type NFTInfo struct {
-	TokenOwner       string
-	TokenData        *TokenData
-	TokenId          *TokenDataId
-	RelatedHash      string
-	RelatedTimestamp uint64
-}
-
-func (c *TokenClient) GetAllTokenForAccount(account txnBuilder.AccountAddress) ([]*NFTInfo, error) {
-
-	owner := account.ToShortString()
-	const tokenDepositEvent = "0x3::token::DepositEvent"   // 存入
-	const tokenWithdrawEvent = "0x3::token::WithdrawEvent" // 转出
-
-	nftsMap := make(map[string]*NFTInfo, 0) // 这一步执行之后的 info 里面，还未包含 tokenData
+func GetAllTokenForAccount(dba *gorm.DB, c *aptosclient.RestClient, owner string, start int) error {
 	parseNftFromTransaction := func(txn aptostypes.Transaction) (err error) {
 		if !txn.Success {
 			return
@@ -241,42 +195,45 @@ func (c *TokenClient) GetAllTokenForAccount(account txnBuilder.AccountAddress) (
 			if err != nil {
 				continue
 			}
-			tokenKey := token.Id.TokenDataId.identifier()
-			_, exists := nftsMap[tokenKey]
-			switch event.Type {
-			case tokenWithdrawEvent:
-				if exists {
-					delete(nftsMap, tokenKey)
-				}
-			case tokenDepositEvent:
-				if exists {
-					continue
-				}
-				nft := &NFTInfo{
-					TokenOwner:       owner,
-					TokenData:        nil,
-					TokenId:          &token.Id.TokenDataId,
-					RelatedHash:      txn.Hash,
-					RelatedTimestamp: txn.Timestamp,
-				}
-				nftsMap[tokenKey] = nft
+			_amount, _ := strconv.Atoi(token.Amount)
+			nft := &NFTInfo{
+				Type:             event.Type,
+				Amount:           _amount,
+				Tokenowner:       owner,
+				TokenData:        TokenData{},
+				TokenId:          token.Id.TokenDataId,
+				Relatedhash:      txn.Hash,
+				Relatedtimestamp: txn.Timestamp,
 			}
+
+			tokenId := nft.TokenId
+			creator, err := txnBuilder.NewAccountAddressFromHex(tokenId.Creator)
+			if err != nil {
+				continue
+			}
+			tokenData, err := NewTokenClient(c).GetTokenData(*creator, tokenId.Collection, tokenId.Name)
+			if err != nil {
+				continue
+			}
+			nft.TokenData = *tokenData
+
+			Insertnft(dba, nft)
 		}
 		return nil
 	}
 
 	const limit = 100
-	offset := uint64(0)
+	offset := uint64(start)
 	for {
 		txns, err := c.GetAccountTransactions(owner, offset, limit)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for _, txn := range txns {
 			err = parseNftFromTransaction(txn)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 
@@ -287,20 +244,5 @@ func (c *TokenClient) GetAllTokenForAccount(account txnBuilder.AccountAddress) (
 		}
 	}
 
-	nfts := []*NFTInfo{}
-	for _, nft := range nftsMap {
-		tokenId := nft.TokenId
-		creator, err := txnBuilder.NewAccountAddressFromHex(tokenId.Creator)
-		if err != nil {
-			continue
-		}
-		tokenData, err := c.GetTokenData(*creator, tokenId.Collection, tokenId.Name)
-		if err != nil {
-			continue
-		}
-		nft.TokenData = tokenData
-		nfts = append(nfts, nft)
-	}
-
-	return nfts, nil
+	return nil
 }

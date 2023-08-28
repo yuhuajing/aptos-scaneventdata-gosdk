@@ -1,21 +1,23 @@
 package scanaccount
 
 import (
-	"fmt"
 	"math/big"
 
-	txnBuilder "github.com/coming-chat/go-aptos/transaction_builder"
+	"github.com/coming-chat/go-aptos/aptosclient"
+	"github.com/jinzhu/gorm"
 )
 
-func (c *TokenClient) GetAllToken(account txnBuilder.AccountAddress) {
-	resType, _ := c.GetAccountResources(account.ToShortString(), 0) // 0 means the ;atest version
+func GetAllToken(dba *gorm.DB, c *aptosclient.RestClient, owner string) {
+	resType, _ := c.GetAccountResources(owner, 0) // 0 means the ;atest version
 	for _, res := range resType {
 		if StartsWith(res.Type, "0x1::coin::CoinStore") {
-			fmt.Println(res.Type)
+			//fmt.Println(res.Type)
 			coin := res.Data["coin"].(map[string]interface{})
 			value := coin["value"].(string)
 			balance, _ := big.NewInt(0).SetString(value, 10)
-			fmt.Println(balance)
+
+			Inserttoken(dba, AccToken{Address: owner, Contype: res.Type, Value: balance.String()})
+			//fmt.Println(balance)
 		}
 	}
 }

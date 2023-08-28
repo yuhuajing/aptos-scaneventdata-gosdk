@@ -43,7 +43,7 @@ func TestGetTokenForAccount(t *testing.T) {
 	//t.Log(data.Id.TokenDataId)
 }
 
-func TestGetAllToken(t *testing.T) {
-	owner, _ := txnBuilder.NewAccountAddressFromHex("0x7e5f7bdd454478be1ffe9b66b849efd02359a971aa6a848ceb03bbb5729b3b52")
-	tokenClient.GetAllToken(*owner)
-}
+// func TestGetAllToken(t *testing.T) {
+// 	owner, _ := txnBuilder.NewAccountAddressFromHex("0x7e5f7bdd454478be1ffe9b66b849efd02359a971aa6a848ceb03bbb5729b3b52")
+// 	tokenClient.GetAllToken(*owner)
+// }
