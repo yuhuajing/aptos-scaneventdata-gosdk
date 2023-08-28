@@ -1,4 +1,4 @@
-package nft
+package scanaccount
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/coming-chat/go-aptos/aptosclient"
 	txnBuilder "github.com/coming-chat/go-aptos/transaction_builder"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -29,24 +28,6 @@ var (
 	tokenClient   = NewTokenClient(restClient)
 )
 
-func TestGetCollectionData(t *testing.T) {
-	account, err := txnBuilder.NewAccountAddressFromHex(nftCreator)
-	require.Nil(t, err)
-
-	data, err := tokenClient.GetCollectionData(*account, nftCollectionName)
-	require.Nil(t, err)
-	t.Log(data)
-}
-
-func TestGetTokenData(t *testing.T) {
-	account, err := txnBuilder.NewAccountAddressFromHex(nftCreator)
-	require.Nil(t, err)
-
-	data, err := tokenClient.GetTokenData(*account, nftCollectionName, nftTokenNameOwned)
-	require.Nil(t, err)
-	t.Log(data)
-}
-
 func TestGetTokenForAccount(t *testing.T) {
 	tokenId := TokenId{
 		TokenDataId: TokenDataId{ //0xd2c3b86a43bd2d3dcb3c27f9360f714124405f93af5fdb94210f42aff3ce79ff
@@ -60,21 +41,6 @@ func TestGetTokenForAccount(t *testing.T) {
 	fmt.Println(tr)
 
 	//t.Log(data.Id.TokenDataId)
-}
-
-func TestGetAllTokenForAccount(t *testing.T) {
-	owner, err := txnBuilder.NewAccountAddressFromHex(nftOwner)
-	require.Nil(t, err)
-	nfts, err := tokenClient.GetAllTokenForAccount(*owner)
-	require.Nil(t, err)
-	t.Log(nfts)
-}
-
-func TestGetSpeCollectionData(t *testing.T) {
-	owner := "0x55f710b0b0330e060c41f731ffdd61b846910576bacd0a87be9fd37172012e08"
-	ev, _ := tokenClient.GetSpeCollectionData(owner)
-	fmt.Println(ev)
-
 }
 
 func TestGetAllToken(t *testing.T) {

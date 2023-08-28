@@ -3,6 +3,7 @@ package aptosclient
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"strconv"
 	"testing"
@@ -16,9 +17,34 @@ import (
 
 const (
 	Mnemonic        = "crack coil okay hotel glue embark all employ east impact stomach cigar"
-	MnemonicAddress = "0x559c26e61a74a1c40244212e768ab282a2cbe2ed679ad8421f7d5ebfb2b79fb5"
-	ReceiverAddress = "0x6ed6f83f1891e02c00c58bf8172e3311c982b1c4fbb1be2d85a55562d4085fb1"
+	MnemonicAddress = "0x961abe79017867051be0a6e3aa2b7caa1304339516a8a8e7cc60ef7a1fd9fb71"
+	ReceiverAddress = "0x8a9da9851d7f0c3ef6dc5d6b549d2e832ffc0109ee72607f57c30d78003e44a8"
 )
+
+func Test_getTxByHash(t *testing.T) {
+	url := MainnetRestUrl
+	client := Client(t, url)
+	tx, _ := client.GetTransactionByHash("0x0f29de11e8051c8896106bf4cc290fd57b338d6724496534f70047336da300dd")
+	content, _ := tx.MarshalJSON()
+	fmt.Println(string(content))
+}
+
+func Test_getTxByAccount(t *testing.T) {
+	url := MainnetRestUrl
+	client := Client(t, url)
+	account := "0x7e5f7bdd454478be1ffe9b66b849efd02359a971aa6a848ceb03bbb5729b3b52"
+	//accountInfo, _ := client.GetAccount(account)
+	txs, _ := client.GetAccountTransactions(account, 0, 200)
+	fmt.Println(len(txs))
+
+	// fmt.Println(txs[len(txs)-1].Version)
+	// txss, _ := client.GetAccountTransactions(account, 100, 1)
+	// fmt.Println(txss[0].Version)
+	// for _, tx := range txs {
+	// 	content, _ := tx.MarshalJSON()
+	// 	fmt.Println(string(content))
+	// }
+}
 
 func TestFaucet(t *testing.T) {
 	// address := ReceiverAddress
@@ -43,6 +69,7 @@ func TestTransferBCS(t *testing.T) {
 
 	client := Client(t, DevnetRestUrl)
 	account, err := aptosaccount.NewAccountWithMnemonic(Mnemonic)
+	fmt.Println(account)
 	require.Nil(t, err)
 
 	params := transferParams{}

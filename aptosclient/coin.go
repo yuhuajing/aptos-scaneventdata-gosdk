@@ -15,10 +15,11 @@ func (c *RestClient) GetCoinInfo(coinType string) (aptostypes.CoinInfo, error) {
 	}
 
 	address := coinType[:i]
-	resource, err := c.GetAccountResource(address, fmt.Sprintf("0x1::coin::CoinInfo<%s>", coinType), 0)
+	resource, err := c.GetAccountResourceByResType(address, fmt.Sprintf("0x1::coin::CoinInfo<%s>", coinType), 0)
 	if err != nil {
 		return aptostypes.CoinInfo{}, err
 	}
+	//fmt.Println(resource)
 	coinInfo := aptostypes.CoinInfo{}
 	coinInfo.Decimals = int(resource.Data["decimals"].(float64))
 	coinInfo.Name = resource.Data["name"].(string)

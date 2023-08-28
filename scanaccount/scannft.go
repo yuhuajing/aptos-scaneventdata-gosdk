@@ -1,9 +1,8 @@
-package nft
+package scanaccount
 
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"github.com/coming-chat/go-aptos/aptosclient"
@@ -24,6 +23,17 @@ type CollectionData struct {
 	Maximum uint64 `json:"maximum"`
 
 	Supply uint64 `json:"supply"`
+}
+
+type Evolution struct {
+	Stage_name_1 string `json:"stage_name_1"`
+	Stage_uri_1  string `json:"stage_uri_1"`
+	Stage_name_2 string `json:"stage_name_2"`
+	Stage_uri_2  string `json:"stage_uri_2"`
+	Stage_name_3 string `json:"stage_name_3"`
+	Stage_uri_3  string `json:"stage_uri_3"`
+	Rarity       string `json:"rarity"`
+	Story        string `json:"story"`
 }
 
 type TokenData struct {
@@ -156,7 +166,7 @@ func (c *TokenClient) GetTokenData(creator txnBuilder.AccountAddress, collection
 	out.Maximum, _ = strconv.ParseUint(out.MaxString, 10, 64)
 	out.Supply, _ = strconv.ParseUint(out.SupplyString, 10, 64)
 	out.Collection = collectionName
-	//fmt.Println(out.TokenData)
+	fmt.Println(out.TokenData)
 	return &out.TokenData, nil
 }
 
@@ -165,11 +175,11 @@ func (c *TokenClient) GetTokenData(creator txnBuilder.AccountAddress, collection
  * @param account Hex-encoded 32 byte Aptos account address which created a token
  * @param tokenId token id
  */
-func (c *TokenClient) GetTokenForAccount(account string, tokenId TokenId) (*Token, error) {
+func (c *TokenClient) GetTokenForAccount(account txnBuilder.AccountAddress, tokenId TokenId) (*Token, error) {
 	if tokenId.PropertyVersion == "" {
 		tokenId.PropertyVersion = "0"
 	}
-	tokenStore, err := c.GetAccountResourceByResType(account, "0x3::token::TokenStore", 0)
+	tokenStore, err := c.GetAccountResourceByResType(account.ToShortString(), "0x3::token::TokenStore", 0)
 	if err != nil {
 		return nil, err
 	}
@@ -200,6 +210,7 @@ func (c *TokenClient) GetTokenForAccount(account string, tokenId TokenId) (*Toke
 }
 
 type NFTInfo struct {
+	TokenOwner       string
 	TokenData        *TokenData
 	TokenId          *TokenDataId
 	RelatedHash      string
@@ -207,7 +218,6 @@ type NFTInfo struct {
 }
 
 func (c *TokenClient) GetAllTokenForAccount(account txnBuilder.AccountAddress) ([]*NFTInfo, error) {
-	// 我们需要遍历该用户所有的交易，从中筛选出获得 NFT 的交易，再根据其中的 NFT 信息去查询详细的数据
 
 	owner := account.ToShortString()
 	const tokenDepositEvent = "0x3::token::DepositEvent"   // 存入
@@ -243,6 +253,7 @@ func (c *TokenClient) GetAllTokenForAccount(account txnBuilder.AccountAddress) (
 					continue
 				}
 				nft := &NFTInfo{
+					TokenOwner:       owner,
 					TokenData:        nil,
 					TokenId:          &token.Id.TokenDataId,
 					RelatedHash:      txn.Hash,
@@ -254,7 +265,7 @@ func (c *TokenClient) GetAllTokenForAccount(account txnBuilder.AccountAddress) (
 		return nil
 	}
 
-	const limit = 200
+	const limit = 100
 	offset := uint64(0)
 	for {
 		txns, err := c.GetAccountTransactions(owner, offset, limit)
@@ -292,86 +303,4 @@ func (c *TokenClient) GetAllTokenForAccount(account txnBuilder.AccountAddress) (
 	}
 
 	return nfts, nil
-}
-
-type Evolution struct {
-	Stage_name_1 string `json:"stage_name_1"`
-	Stage_uri_1  string `json:"stage_uri_1"`
-	Stage_name_2 string `json:"stage_name_2"`
-	Stage_uri_2  string `json:"stage_uri_2"`
-	Stage_name_3 string `json:"stage_name_3"`
-	Stage_uri_3  string `json:"stage_uri_3"`
-	Rarity       string `json:"rarity"`
-	Story        string `json:"story"`
-}
-
-func (c *TokenClient) GetSpeCollectionData(creator string) (*Evolution, error) {
-	collections, err := c.GetAccountResourceByResType(creator, "0x55f710b0b0330e060c41f731ffdd61b846910576bacd0a87be9fd37172012e08::beast_generator::BeastCollection", 0)
-	if err != nil {
-		return nil, err
-	}
-
-	handle := ""
-	if data, ok := collections.Data["collections"].(map[string]interface{}); ok {
-		handle, _ = data["handle"].(string)
-	}
-	fmt.Println(handle)
-	body := aptosclient.TableItemRequest{
-		KeyType:   "u64",
-		ValueType: "0x55f710b0b0330e060c41f731ffdd61b846910576bacd0a87be9fd37172012e08::beast_generator::Evolution",
-		Key:       strconv.Itoa(154),
-	}
-
-	// out := struct {
-	// 	Evolution
-	// }{}
-
-	out := struct {
-		Evolution
-		Out_Stage_name_1 string `json:"stage_name_1"`
-		Out_Stage_uri_1  string `json:"stage_uri_1"`
-		Out_Stage_name_2 string `json:"stage_name_2"`
-		Out_Stage_uri_2  string `json:"stage_uri_2"`
-		Out_Stage_name_3 string `json:"stage_name_3"`
-		Out_Stage_uri_3  string `json:"stage_uri_3"`
-	}{}
-	err = c.GetTableItem(&out, handle, body, "")
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-	out.Stage_name_1 = out.Out_Stage_name_1
-	out.Stage_name_2 = out.Out_Stage_name_2
-	out.Stage_name_3 = out.Out_Stage_name_3
-	out.Stage_uri_1 = out.Out_Stage_uri_1
-	out.Stage_uri_2 = out.Out_Stage_uri_2
-	out.Stage_uri_3 = out.Out_Stage_uri_3
-	fmt.Println(out.Evolution)
-	return &out.Evolution, nil
-}
-
-func (c *TokenClient) GetAllToken(account txnBuilder.AccountAddress) {
-
-	resType, _ := c.GetAccountResources(account.ToShortString(), 0) // 0 means the ;atest version
-	for _, res := range resType {
-		if StartsWith(res.Type, "0x1::coin::CoinStore") {
-			fmt.Println(res.Type)
-			coin := res.Data["coin"].(map[string]interface{})
-			value := coin["value"].(string)
-			balance, _ := big.NewInt(0).SetString(value, 10)
-			fmt.Println(balance)
-		}
-	}
-}
-
-func StartsWith(s, prefix string) bool {
-	if len(s) < len(prefix) {
-		return false
-	}
-	for i := 0; i < len(prefix); i++ {
-		if s[i] != prefix[i] {
-			return false
-		}
-	}
-	return true
 }

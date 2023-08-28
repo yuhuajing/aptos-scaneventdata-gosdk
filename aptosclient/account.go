@@ -23,7 +23,7 @@ func (c *RestClient) GetAccountResources(address string, version uint64) (res []
 	if err != nil {
 		return
 	}
-	if version > 0 {
+	if version > 0 { // if version ==0, it get resources fron the latest version
 		q := req.URL.Query()
 		q.Add("ledger_version", strconv.FormatUint(version, 10))
 		req.URL.RawQuery = q.Encode()
@@ -32,13 +32,13 @@ func (c *RestClient) GetAccountResources(address string, version uint64) (res []
 	return
 }
 
-func (c *RestClient) GetAccountResource(address string, resourceType string, version uint64) (res *aptostypes.AccountResource, err error) {
+func (c *RestClient) GetAccountResourceByResType(address string, resourceType string, version uint64) (res *aptostypes.AccountResource, err error) {
 	req, err := http.NewRequest("GET", c.GetVersionedRpcUrl()+"/accounts/"+address+"/resource/"+resourceType, nil)
 	if err != nil {
 		return
 	}
 	res = &aptostypes.AccountResource{}
-	if version > 0 {
+	if version > 0 { // if version ==0, it get resources fron the latest version
 		q := req.URL.Query()
 		q.Add("ledger_version", strconv.FormatUint(version, 10))
 		req.URL.RawQuery = q.Encode()
@@ -48,8 +48,8 @@ func (c *RestClient) GetAccountResource(address string, resourceType string, ver
 }
 
 // Variation of `GetAccountResource`: when specified resource is not found (error with code 404), this will return `nil` result and `nil` error
-func (c *RestClient) GetAccountResourceHandle404(address, resourceType string, version uint64) (res *aptostypes.AccountResource, err error) {
-	res, err = c.GetAccountResource(address, resourceType, version)
+func (c *RestClient) GetAccountResourceByResTypeHandle404(address, resourceType string, version uint64) (res *aptostypes.AccountResource, err error) {
+	res, err = c.GetAccountResourceByResType(address, resourceType, version)
 	if err == nil {
 		return res, nil
 	}
@@ -60,8 +60,8 @@ func (c *RestClient) GetAccountResourceHandle404(address, resourceType string, v
 	}
 }
 
-func (c *RestClient) IsAccountHasResource(address string, resourceType string, version uint64) (bool, error) {
-	res, err := c.GetAccountResourceHandle404(address, resourceType, version)
+func (c *RestClient) IsAccountHasResourceInSpecificVersion(address string, resourceType string, version uint64) (bool, error) {
+	res, err := c.GetAccountResourceByResTypeHandle404(address, resourceType, version)
 	if err != nil {
 		return false, err
 	} else {
@@ -74,7 +74,7 @@ func (c *RestClient) GetAccountModules(address string, version uint64) (res []ap
 	if err != nil {
 		return
 	}
-	if version > 0 {
+	if version > 0 { // if version ==0, it get resources fron the latest version
 		q := req.URL.Query()
 		q.Add("version", strconv.FormatUint(version, 10))
 		req.URL.RawQuery = q.Encode()
@@ -83,12 +83,12 @@ func (c *RestClient) GetAccountModules(address string, version uint64) (res []ap
 	return
 }
 
-func (c *RestClient) GetAccountModule(address, moduleName string, version uint64) (res *aptostypes.MoveModule, err error) {
+func (c *RestClient) GetAccountModuleByModname(address, moduleName string, version uint64) (res *aptostypes.MoveModule, err error) {
 	req, err := http.NewRequest("GET", c.GetVersionedRpcUrl()+"/accounts/"+address+"/module/"+moduleName, nil)
 	if err != nil {
 		return
 	}
-	if version > 0 {
+	if version > 0 { // if version ==0, it get resources fron the latest version
 		q := req.URL.Query()
 		q.Add("version", strconv.FormatUint(version, 10))
 		req.URL.RawQuery = q.Encode()
@@ -104,7 +104,7 @@ func (c *RestClient) AptosBalanceOf(address string) (balance *big.Int, err error
 
 func (c *RestClient) BalanceOf(address string, coinTag string) (balance *big.Int, err error) {
 	t := "0x1::coin::CoinStore<" + coinTag + ">"
-	res, err := c.GetAccountResourceHandle404(address, t, 0)
+	res, err := c.GetAccountResourceByResTypeHandle404(address, t, 0)
 	if err != nil {
 		return nil, err
 	}

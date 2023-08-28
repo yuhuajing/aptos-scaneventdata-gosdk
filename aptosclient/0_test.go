@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// https://explorer.aptoslabs.com/account/?network=mainnet
 const (
 	MainnetRestUrl = "https://fullnode.mainnet.aptoslabs.com"
 	TestnetRestUrl = "https://testnet.aptoslabs.com"
