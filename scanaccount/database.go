@@ -43,6 +43,7 @@ func Insertnft(dba *gorm.DB, nftdata *NFTInfo) {
 	res := dba.Model(&NFTInfo{}).Where("type = ? AND tokenowner = ? AND  tokencreator = ? AND collection = ? AND name = ? AND relatedhash=? AND relatedtimestamp=?", nftdata.Type, nftdata.Tokenowner, nftdata.TokenId.Creator, nftdata.TokenId.Collection, nftdata.TokenId.Name, nftdata.Relatedhash, nftdata.Relatedtimestamp).First(&NFTInfo{})
 	if res.RowsAffected == 0 {
 		dba.Create(&NFTInfo{
+			Sequence:         nftdata.Sequence,
 			Type:             nftdata.Type,
 			Amount:           nftdata.Amount,
 			Tokenowner:       nftdata.Tokenowner,

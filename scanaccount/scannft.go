@@ -197,6 +197,7 @@ func GetAllTokenForAccount(dba *gorm.DB, c *aptosclient.RestClient, owner string
 			}
 			_amount, _ := strconv.Atoi(token.Amount)
 			nft := &NFTInfo{
+				Sequence:         int(txn.SequenceNumber),
 				Type:             event.Type,
 				Amount:           _amount,
 				Tokenowner:       owner,

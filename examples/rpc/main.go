@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
@@ -28,22 +29,21 @@ func main() {
 	dba := scanaccount.Buildconnect()
 	dba.AutoMigrate(&scanaccount.NFTInfo{}, &scanaccount.AccToken{}, &scanaccount.NFTOwner{})
 
-	//accountinfo, _ := client.GetAccount(address)
-
-	res := scanaccount.AccountAddress{}
-	dba.Model(&scanaccount.AccountAddress{}).Where("address = ?", address).Find(&res)
-	// for {
-	// 	if int(accountinfo.SequenceNumber) > res.Sequence {
-	// 		scanaccount.GetAllTokenForAccount(dba, client, address, res.Sequence)
-	// 		scanaccount.GetAllToken(dba, client, address)
-	// 		dba.Model(&scanaccount.AccountAddress{}).Where("address = ?", address).Update("sequence", int(accountinfo.SequenceNumber))
-	// 	} else {
-	// 		time.Sleep(5 * time.Minute)
-	// 	}
-	// }
-
-	scanaccount.GetAllTokenForAccount(dba, client, address, 0)
-	scanaccount.GetAllToken(dba, client, address)
+	for {
+		accountinfo, _ := client.GetAccount(address)
+		_sequence := 0
+		res := []scanaccount.NFTInfo{}
+		dba.Model(&scanaccount.NFTInfo{}).Where("tokenowner = ?", address).Order("sequence desc").Limit(1).Find(&res)
+		if len(res) > 0 {
+			_sequence = res[0].Sequence + 1
+		}
+		if int(accountinfo.SequenceNumber) > _sequence {
+			scanaccount.GetAllTokenForAccount(dba, client, address, _sequence)
+			scanaccount.GetAllToken(dba, client, address)
+		} else {
+			time.Sleep(5 * time.Minute)
+		}
+	}
 }
 
 func printLine(content string) {

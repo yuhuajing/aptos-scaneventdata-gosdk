@@ -5,6 +5,7 @@ const tokenWithdrawEvent = "0x3::token::WithdrawEvent"
 
 type NFTInfo struct {
 	ID               uint        `gorm:"primary_key"`
+	Sequence         int         `gorm:"sequence"`
 	Type             string      `json:"type"`
 	Amount           int         `json:"amount"`
 	Tokenowner       string      `json:"tokenowner"`
