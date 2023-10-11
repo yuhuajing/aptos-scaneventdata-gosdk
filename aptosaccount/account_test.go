@@ -2,6 +2,7 @@ package aptosaccount
 
 import (
 	"crypto/ed25519"
+	"encoding/hex"
 	"reflect"
 	"testing"
 )
@@ -15,7 +16,6 @@ func TestAccountSign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// 0x1d712fcce859405d768bc636f12d0f8ac5ad88b39178214b22685a9cff310fb6
 	// 0x55c15111310a9c107745b1cf80d8d9031f0582a1d21a5eeefa0f6e35c4e2ad74
 	// 0xe1c1deec04ed6d7f92f867875c5c9733b64e376ca5a7f5da5b6bdaf3dd28eb9c
@@ -25,6 +25,38 @@ func TestAccountSign(t *testing.T) {
 
 	data := []byte{0x1}
 	salt := "APTOS::RawTransaction"
+	signature := account.Sign(data, salt)
+
+	t.Logf("%x", signature)
+}
+
+func TestAccount(t *testing.T) {
+	account := NewAccount(seed[:])
+
+	t.Logf("pri = %x", account.PrivateKey) //a434bb088ae8a69d5884a71fe85699b9a058cf9e2b688f50309bafb2f14ec44ea9b418c914b523b07d0836672a621319d2cc7069a06265e3b52853a2339e3efd
+	t.Logf("pub = %x", account.PublicKey)  //a9b418c914b523b07d0836672a621319d2cc7069a06265e3b52853a2339e3efd
+	t.Logf("add = %x", account.AuthKey)    //559c26e61a74a1c40244212e768ab282a2cbe2ed679ad8421f7d5ebfb2b79fb5
+
+	data := []byte{0x01}
+	salt := "APTOS::RawTransaction"
+	signature := account.Sign(data, salt)
+
+	t.Logf("%x", signature)
+}
+
+func TestAccountImportPri(t *testing.T) {
+	privateKey, err := hex.DecodeString("56709883872e7600fb8ff324845d7e4297cdc96caa2e4d2397f714ea3fdc319a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	account := NewAccount(privateKey)
+
+	t.Logf("pri = %x", account.PrivateKey[:32]) //a434bb088ae8a69d5884a71fe85699b9a058cf9e2b688f50309bafb2f14ec44ea9b418c914b523b07d0836672a621319d2cc7069a06265e3b52853a2339e3efd
+	t.Logf("pub = %x", account.PublicKey)       //a9b418c914b523b07d0836672a621319d2cc7069a06265e3b52853a2339e3efd
+	t.Logf("add = %x", account.AuthKey)         //559c26e61a74a1c40244212e768ab282a2cbe2ed679ad8421f7d5ebfb2b79fb5
+
+	data := []byte{0x01}
+	salt := ""
 	signature := account.Sign(data, salt)
 
 	t.Logf("%x", signature)
